@@ -1,3 +1,4 @@
+##### This paper is currently under submission. If it gets accepted, we will release the complete code as soon as possible. #####
 import random
 import numpy as np
 from collections import defaultdict
@@ -15,7 +16,6 @@ import os
 opt = Options()
 
 
-# 建立存储所需内容的文件夹，包括训练完的模型和日志
 current_time = time.localtime()
 exp_folder = opt.exp_folder if opt.exp_folder else time.strftime("%Y-%m-%d-%H-%M-%S", current_time)   # 文件夹按时间命名
 exp_folder = os.path.join( opt.exp_path, exp_folder)
@@ -40,38 +40,31 @@ if not os.path.exists(exp_folder):
 
 logger = SummaryWriter( log_dir=os.path.join(log_save_path, 'exp'))
 
-# 随机seed设置
 # torch.manual_seed(seed)
 seed = opt.seed
 if seed is None:
-    seed = random.randint(1, 10000)    # 42
+    seed = random.randint(1, 10000)
     # seed = 42
 util.set_random_seed(seed)  # seed生效
 print('初始化随机seed:' , seed)
 
-logger.add_text('seed', str(seed))  # 在logger中保存seed
+logger.add_text('seed', str(seed))
 
-torch.backends.cudnn.benckmark = True  # 启动cudnn的自动优化机制,它会在每次运行时根据输入数据的大小和其他参数选择最适合的卷积实现
-# torch.backends.cudnn.deterministic = True  # 启用CuDNN的确定性模式，以确保每次运行相同的输入和网络结构时，生成的结果完全一致，一般调试和验证模型时有用
+torch.backends.cudnn.benckmark = True
 
-# 读取训练集dataset和dataLoader
 dataset = train_Ultrasound_dataset.UltrasoundDataset()
 dataLoader = Ultrasound_dataloader.getDataloader(dataset, opt)
 print('完成训练集加载')
 
-# 读取测试集
 val_dataset = train_Ultrasound_dataset.UltrasoundDataset(is_train=False)
 val_dataLoader = Ultrasound_dataloader.getDataloader(val_dataset, opt, is_Train=False)
 print('完成测试集加载')
 
-# 实例化model
 model = new_network_single.Network(opt)
 
 if opt.start_epoch > 11:
-    # 读取之前的参数
     model.loadModel(opt.model_weight_path)
 elif opt.if_init_model:
-    # 初始化模型权重
     model.initModel(init_type='normal',gain=0.02)
 
 
@@ -85,7 +78,6 @@ for epoch in (range(opt.start_epoch, opt.end_epoch + 1)):
         SR_data = train_data['SR_data']
         powerDppler_data = train_data['powerDppler_data']
 
-        # train
         loss_dict = model.feedData(SR_data, powerDppler_data, epoch, is_train = True)
         for k, v in loss_dict.items():
             losses[k] += v.item()
@@ -100,7 +92,6 @@ for epoch in (range(opt.start_epoch, opt.end_epoch + 1)):
     runtime = end - start
     print('epoch:{}, runtime:{}'.format(epoch, runtime))
 
-    # 测试
     if epoch >= 180 and epoch % opt.save_model_step == 0:
         model.saveModel(os.path.join(model_save_path, str(epoch) + '_model_weight.pth'))
         print("保存pth完毕")
@@ -128,11 +119,8 @@ for epoch in (range(opt.start_epoch, opt.end_epoch + 1)):
                 print('val_epoch:{}, val_iter:{}, ValLoss:{}'.format(epoch, idx, loss_dict1["val_loss"].item()))
 
                 torch.cuda.empty_cache()
-        # logger.add_scalar('val_loss', losses / step, epoch)
         for k, v in losses1.items():
             logger.add_scalar(k, v / step, epoch)
-        # for k, v in model.getLR().items():
-        #     logger.add_scalar(k, v, epoch)
 
     logger.flush()
 logger.close()
